@@ -16,6 +16,7 @@ export async function createTemplate(): Promise<string> {
   const script = js.replace(/<\/script/gi, '<\\/script');
   const csp = `default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net/npm/mermaid@12.2.0/dist/mermaid.min.js; style-src 'unsafe-inline'; img-src data:; font-src 'none'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'`;
   return `<!doctype html>
+<!-- ContextCast: SPDX-License-Identifier: 0BSD -->
 <html lang="__CONTEXTCAST_LANGUAGE__">
 <head>
 <meta charset="utf-8">

@@ -1,5 +1,6 @@
 ---
 name: contextcast
+license: 0BSD
 description: Create narrated technical briefings as standalone HTML, including PR review explanations, architecture walkthroughs, and initiative onboarding. Uses ContextCast's structured scenes and browser-native voices.
 ---
 

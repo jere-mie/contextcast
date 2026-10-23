@@ -3,6 +3,7 @@ import { createTemplate } from './build-briefing';
 const assets = new URL('../.agents/skills/contextcast/assets/', import.meta.url);
 await mkdir(assets, { recursive: true });
 await writeFile(new URL('template.html', assets), await createTemplate(), 'utf8');
+await copyFile(new URL('../LICENSE', import.meta.url), new URL('../LICENSE', assets));
 for (const sample of ['architecture', 'pr-review']) {
   await copyFile(new URL(`../examples/${sample}.json`, import.meta.url), new URL(`${sample}.json`, assets));
 }

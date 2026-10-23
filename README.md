@@ -86,3 +86,5 @@ npm run check
 Tests cover schema parity, speech races, seeking, the full speed range, output size/readability, a copied skill running without node_modules, direct file opening, on-demand CDN diagrams, and CDN failure. Browser tests require installed Chrome, or set `CONTEXTCAST_BROWSER=msedge` for Edge. See [verification notes](docs/verification.md). Firefox and Safari have not been tested.
 
 Vanilla TypeScript, Zod 3.25.76 for development validation, esbuild 0.25.12 for maintaining the template, Mermaid 12.2.0 from CDN. No Reveal.js: one controller owns scene and speech state. Upstream: [Web Speech](https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesis), [Mermaid usage](https://mermaid.js.org/config/usage).
+
+Licensed under the [BSD Zero Clause license (0BSD)](LICENSE). Third-party dependencies retain their own licenses.

@@ -1,0 +1,30 @@
+{
+  "name": "contextcast",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Single-file, narrated technical briefings with browser-native speech",
+  "scripts": {
+    "build": "tsx scripts/build-briefing.ts",
+    "build:examples": "tsx scripts/build-briefing.ts examples/pr-review.json dist/example-pr-review.html && tsx scripts/build-briefing.ts examples/architecture.json dist/example-architecture.html",
+    "validate": "tsx scripts/validate-briefing.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "test:browser": "tsx --test tests/browser.smoke.ts",
+    "check": "npm run typecheck && npm test && npm run build:examples && npm run test:browser"
+  },
+  "dependencies": {
+    "mermaid": "12.2.0",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "esbuild": "0.25.12",
+    "playwright": "1.56.1",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3"
+  },
+  "engines": {
+    "node": ">=22.12"
+  }
+}

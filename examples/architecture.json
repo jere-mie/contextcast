@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1", "id": "architecture-demo", "title": "Inside ContextCast", "kind": "architecture",
+  "subtitle": "From structured evidence to a narrated, portable briefing.", "language": "en-US",
+  "provenance": "Conceptual overview of this repository. The sequence diagram simplifies controller and browser events. No external service is contacted by the viewer.",
+  "sources": [{ "id": "architecture-evidence", "label": "Repository architecture · module map", "excerpt": "src/schema/briefing.ts validates content. scripts/build-briefing.ts bundles the player and Mermaid into one HTML file. src/player/controller.ts owns the current beat and utterance generation. src/player/speech.ts adapts browser speech. src/renderers/scenes.ts renders six layouts. The viewer never fetches briefing data or audio." }],
+  "settings": { "estimatedWordsPerMinute": 150 },
+  "scenes": [
+    { "id": "arch-overview", "title": "One input. One portable artifact.", "layout": "title", "visual": { "headline": "Research once.\nExplain anywhere.", "description": "A small authoring pipeline, a reusable viewer, and all the context in one file.", "items": [
+      { "id": "arch-data", "title": "Structured content", "body": "Versioned scenes, beats, cues, and evidence." },
+      { "id": "arch-build", "title": "Single-file compiler", "body": "Inline styles, player, diagrams, and content." },
+      { "id": "arch-player", "title": "Browser narration", "body": "Speak short beats on explicit Play." }
+    ] }, "beats": [
+      { "id": "arch-intro", "speech": "ContextCast separates research from presentation. The author collects evidence and writes a structured briefing, while the same player handles every generated artifact.", "sourceIds": ["architecture-evidence"] },
+      { "id": "arch-compile", "speech": "The compiler validates that content, bundles the viewer and diagram library, and produces one file that opens directly from disk.", "cue": { "type": "focus", "target": "arch-build" }, "sourceIds": ["architecture-evidence"] },
+      { "id": "arch-browser", "speech": "Narration remains text until you press Play. The browser uses your selected voice, and the controller advances when each short utterance finishes.", "cue": { "type": "focus", "target": "arch-player" }, "sourceIds": ["architecture-evidence"] }
+    ] },
+    { "id": "arch-sequence", "title": "The beat drives the visual", "layout": "diagram", "visual": { "description": "Conceptual sequence. Speech completion advances the beat; boundary events are optional and unused.", "definition": "sequenceDiagram\n participant V as Viewer\n participant C as Controller\n participant S as Browser speech\n V->>C: Play\n C->>V: Render current beat\n C->>S: Speak one utterance\n S-->>C: End event\n C->>V: Select next beat\n C->>S: Speak next utterance" }, "beats": [
+      { "id": "arch-control", "speech": "The controller owns the active beat. It updates the visual and sends one utterance to the browser, rather than queueing the whole briefing.", "sourceIds": ["architecture-evidence"] },
+      { "id": "arch-cancel", "speech": "Seeking invalidates old callbacks before cancellation. This prevents an old completion event from advancing the new chapter or starting a second narration stream.", "cue": { "type": "callout", "text": "One controller · one active beat · generation-checked callbacks" }, "sourceIds": ["architecture-evidence"] },
+      { "id": "arch-time", "speech": "The timeline estimates duration from word counts. It is useful for navigation, while the real speech completion event remains authoritative for advancement.", "sourceIds": ["architecture-evidence"] }
+    ] }
+  ]
+}

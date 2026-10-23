@@ -1,0 +1,1009 @@
+<!doctype html>
+<html lang="__CONTEXTCAST_LANGUAGE__">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net/npm/mermaid@12.2.0/dist/mermaid.min.js; style-src 'unsafe-inline'; img-src data:; font-src 'none'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>__CONTEXTCAST_TITLE__ · ContextCast</title>
+<style>
+:root {
+  color-scheme: dark;
+  font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  --bg: #151617; --text: #e8e8e8; --muted: #a0a1a3; --line: #343638;
+  --accent: #bed3e5; --mono: ui-monospace, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); height: 100dvh; display: flex; flex-direction: column; }
+h1, h2, h3, p { margin: 0; }
+button, select, input { font: inherit; }
+button { border: 0; background: transparent; color: inherit; padding: 5px 8px; cursor: pointer; border-radius: 3px; }
+button:hover { background: #ffffff0c; }
+button:disabled { opacity: .35; cursor: default; }
+button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+select { color: inherit; background: #242628; border: 1px solid var(--line); border-radius: 3px; padding: 4px 6px; }
+a { color: var(--accent); text-decoration: none; } a:hover { text-decoration: underline; }
+[hidden] { display: none !important; }
+.topbar { display: flex; align-items: center; gap: 18px; padding: 10px 16px; border-bottom: 1px solid var(--line); min-height: 49px; }
+.brand { color: var(--muted); font-size: 12px; flex-shrink: 0; }
+h1 { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.header-actions { display: flex; gap: 4px; margin-left: auto; flex-shrink: 0; font-size: 12px; }
+.header-actions button[aria-expanded=true] { background: #ffffff0a; }
+.workspace { flex: 1; min-height: 0; display: grid; grid-template-columns: 190px minmax(0, 1fr) 300px; }
+.workspace.transcript-hidden { grid-template-columns: 190px minmax(0, 1fr); }
+.chapters-panel { padding: 14px 8px; border-right: 1px solid var(--line); overflow-y: auto; }
+.chapters-panel h2, .transcript-header h2 { font-size: 12px; font-weight: 500; color: var(--muted); }
+.chapters-panel h2 { padding: 0 8px 10px; }
+#chapters { display: grid; gap: 2px; }
+.chapter { display: grid; grid-template-columns: 18px 1fr; column-gap: 6px; text-align: left; padding: 8px; }
+.chapter-number, .chapter-time { color: var(--muted); font: 11px/1.6 var(--mono); }
+.chapter-name { font-size: 12px; } .chapter-time { grid-column: 2; font-size: 10px; }
+.chapter[aria-current=step] { background: #ffffff0c; box-shadow: inset 2px 0 var(--accent); }
+.player-column { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.stage { flex: 1; min-height: 0; overflow: auto; padding: 18px 28px; }
+.scene-header { display: flex; align-items: baseline; gap: 12px; padding-bottom: 18px; }
+#scene-position { font: 11px var(--mono); color: var(--muted); white-space: nowrap; }
+#scene-title { font-size: 14px; font-weight: 500; }
+.scene { max-width: 1000px; margin: 0 auto; }
+.hero-headline { font-size: clamp(24px, 2.8vw, 38px); line-height: 1.2; font-weight: 600; letter-spacing: -.7px; white-space: pre-line; }
+.hero-description, .finding-detail { margin: 16px 0 20px; max-width: 75ch; color: #c1c2c4; line-height: 1.65; }
+.cards { display: grid; gap: 0; }
+.idea { padding: 12px 0; border-bottom: 1px solid var(--line); }
+.idea:last-child { border-bottom: 0; }
+.idea h3 { font-size: 14px; font-weight: 600; }
+.idea p { color: var(--muted); margin-top: 3px; font-size: 13px; }
+.focused { background: #bed3e50a; box-shadow: inset 2px 0 var(--accent); padding-left: 12px; }
+.beat-callout { margin-top: 16px; padding: 8px 12px; border-left: 2px solid var(--accent); color: #c6d1da; font-size: 12px; }
+.visual-title { display: none; }
+.scene-sources { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 22px; font-size: 11px; }
+#stage-caption { margin-top: 14px; color: var(--muted); font-size: 13px; }
+.source-link { display: block; text-align: left; padding: 0; color: var(--accent); font-size: 12px; }
+.scene-sources .source-link { font-size: 11px; }
+.muted { color: var(--muted); font-size: 12px; }
+.transport { flex-shrink: 0; border-top: 1px solid var(--line); padding: 8px 16px 10px; }
+input[type=range] { appearance: none; width: 100%; height: 4px; display: block; margin: 5px 0 10px; background: linear-gradient(to right, var(--accent) var(--progress, 0%), #414447 var(--progress, 0%)); cursor: pointer; }
+input[type=range]::-webkit-slider-thumb { appearance: none; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+input[type=range]::-moz-range-thumb { width: 10px; height: 10px; border: 0; border-radius: 50%; background: var(--accent); }
+.transport-controls { display: flex; align-items: center; gap: 4px; font-size: 12px; }
+.play-button { min-width: 58px; background: #dedfe0; color: #171819; font-weight: 600; }
+.play-button:hover { background: white; }
+.time { font: 11px var(--mono); color: var(--muted); margin-left: 10px; white-space: nowrap; }
+.speed-control { margin-left: auto; } .speed-control select { font-size: 12px; }
+#fullscreen { font-size: 20px; padding: 0 5px; }
+.status-row { display: flex; gap: 14px; margin-top: 7px; min-height: 16px; color: var(--muted); font-size: 10px; }
+.status-row > :last-child { margin-left: auto; } #shortcut-feedback { color: var(--text); }
+.message { margin-top: 8px; color: #e7c48d; font-size: 12px; }
+.transcript-panel { border-left: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+.transcript-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px 4px; }
+.transcript-header button { color: var(--muted); font-size: 11px; }
+#transcript-content { overflow: auto; padding: 0 8px 16px; scrollbar-width: thin; }
+.transcript-heading { padding: 14px 8px 6px; font-size: 11px; color: var(--muted); font-weight: 500; }
+.transcript-beat { width: 100%; display: block; text-align: left; padding: 8px; font-size: 13px; line-height: 1.65; color: #b5b6b8; user-select: text; }
+.transcript-beat[aria-current=true] { background: #ffffff0c; color: var(--text); box-shadow: inset 2px 0 var(--accent); }
+.comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+.column-label { font: 11px var(--mono); color: var(--muted); }
+.comparison-column > h3 { margin-bottom: 6px; font-size: 11px; font-weight: 500; }
+.code-description, .diagram-description { color: #bfc0c2; margin-bottom: 16px; font-size: 13px; line-height: 1.6; }
+.code-frame { background: #101112; border: 1px solid var(--line); }
+.code-filename { padding: 8px 12px; border-bottom: 1px solid var(--line); color: var(--muted); font: 11px var(--mono); }
+.code-frame pre { margin: 0; padding: 12px 0; overflow: auto; font: 12px/1.9 var(--mono); }
+.code-line { display: flex; min-width: max-content; padding: 0 12px; border-left: 2px solid transparent; }
+.line-number { min-width: 32px; color: #71777c; user-select: none; }
+.highlight-line { background: #bed3e50c; border-left-color: var(--accent); }
+.code-line code { white-space: pre; color: #d0d5d9; }
+.finding-meta { color: #dec393; font-size: 11px; margin-bottom: 12px; }
+.recommendation { border-left: 2px solid var(--line); padding: 0 14px; margin-top: 20px; }
+.recommendation p { margin-top: 8px; line-height: 1.65; }
+.diagram-host { display: grid; place-items: center; }
+.diagram-host svg { width: 100%; max-height: 430px; height: auto; }
+.diagram-source { white-space: pre-wrap; font: 12px/1.6 var(--mono); max-width: 100%; overflow: auto; }
+.diagram-error { color: #dec393; margin-bottom: 12px; }
+dialog { width: min(680px, 92vw); max-height: 85dvh; overflow: auto; background: #1c1e20; color: var(--text); border: 1px solid #515458; padding: 20px; }
+dialog::backdrop { background: #0008; }
+.dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 18px; }
+.dialog-header h2 { font-size: 17px; }
+dialog h3 { font-size: 13px; margin: 20px 0 10px; }
+dialog p { font-size: 13px; line-height: 1.65; } dialog .muted { margin-top: 12px; }
+#settings-dialog label { display: block; font-size: 12px; margin-bottom: 6px; }
+#voice { width: 100%; font-size: 13px; } #voice-note { margin-top: 12px; }
+.source-block { margin: 14px 0; }
+.source-excerpt { white-space: pre-wrap; overflow-wrap: anywhere; font: 11px/1.8 var(--mono); background: #141516; border: 1px solid var(--line); padding: 12px; max-height: 280px; overflow: auto; }
+.finding-summary { display: grid; gap: 5px; text-align: left; border-left: 2px solid var(--line); width: 100%; padding: 8px 12px; }
+.finding-summary strong { font-size: 13px; font-weight: 500; }
+.shortcuts { display: grid; grid-template-columns: auto 1fr; gap: 12px 22px; font-size: 13px; }
+.shortcuts dd { margin: 0; } kbd { font: 12px var(--mono); color: #dbdfe3; }
+@media (max-width: 1100px) {
+  .workspace { grid-template-columns: 165px minmax(0, 1fr) 260px; }
+  .workspace.transcript-hidden { grid-template-columns: 165px minmax(0, 1fr); }
+  .stage { padding: 16px 20px; }
+  .time { margin-left: 4px; font-size: 10px; }
+  .transport { padding-inline: 10px; } .transport-controls { gap: 0; }
+  .transport-controls > button { padding-inline: 6px; }
+}
+@media (max-width: 850px) {
+  body { height: auto; min-height: 100dvh; }
+  .topbar { flex-wrap: wrap; gap: 4px 12px; } h1 { flex: 1; }
+  .header-actions { width: 100%; margin: 0; }
+  .workspace, .workspace.transcript-hidden { display: flex; flex-direction: column; }
+  .chapters-panel { border: 0; padding: 6px 10px; } .chapters-panel h2 { display: none; }
+  #chapters { display: flex; overflow-x: auto; } .chapter { min-width: 155px; }
+  .player-column { min-height: 440px; }
+  .stage { overflow: visible; padding: 18px 16px; } .scene-header { padding-bottom: 16px; }
+  .transport { position: sticky; bottom: 0; background: var(--bg); }
+  .transcript-panel { border: 0; border-top: 1px solid var(--line); height: 400px; }
+  .transport-controls .time { margin-left: 4px; } .comparison { gap: 16px; }
+  .shortcuts { grid-template-columns: 1fr; gap: 6px; } .shortcuts dd { margin-bottom: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; }
+}
+
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <span class="brand">ContextCast</span><h1 id="briefing-title"></h1>
+  <div class="header-actions">
+    <button id="transcript-toggle" aria-expanded="true" aria-controls="transcript-panel" title="Toggle transcript (T)">Transcript</button>
+    <button id="sources-toggle">Sources</button><button id="settings-toggle" title="Voice settings">Voice</button>
+    <button id="shortcuts-toggle" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)">?</button>
+  </div>
+</header>
+<main class="workspace">
+  <nav class="chapters-panel" aria-label="Briefing chapters"><h2>Chapters</h2><div id="chapters"></div></nav>
+  <section class="player-column" aria-label="Briefing player">
+    <div class="stage"><div class="scene-header"><span id="scene-position"></span><h2 id="scene-title"></h2></div><div id="stage-content"></div><p id="stage-caption" hidden></p><div id="scene-sources" class="scene-sources"></div></div>
+    <div class="transport">
+      <input id="progress" type="range" min="0" step="0.1" value="0" aria-label="Estimated timeline, seek to nearest beat">
+      <div class="transport-controls">
+        <button id="previous-chapter" aria-label="Previous chapter" title="Previous chapter (Shift + ←)">|‹</button>
+        <button id="back" aria-label="Back approximately five seconds" title="Back ≈5s (←)">−5s</button>
+        <button id="play" class="play-button" aria-pressed="false" title="Play / pause (Space or K)">Play</button>
+        <button id="forward" aria-label="Forward approximately five seconds" title="Forward ≈5s (→)">+5s</button>
+        <button id="next-chapter" aria-label="Next chapter" title="Next chapter (Shift + →)">›|</button>
+        <span class="time"><span id="elapsed"></span> / <span id="duration"></span></span>
+        <label class="speed-control"><select id="speed" aria-label="Playback speed" title="Playback speed (< / >)"><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="1.75">1.75×</option><option value="2">2×</option><option value="2.25">2.25×</option><option value="2.5">2.5×</option><option value="2.75">2.75×</option><option value="3">3×</option><option value="3.25">3.25×</option><option value="3.5">3.5×</option><option value="3.75">3.75×</option><option value="4">4×</option><option value="4.25">4.25×</option><option value="4.5">4.5×</option><option value="4.75">4.75×</option><option value="5">5×</option><option value="5.25">5.25×</option><option value="5.5">5.5×</option><option value="5.75">5.75×</option><option value="6">6×</option><option value="6.25">6.25×</option><option value="6.5">6.5×</option><option value="6.75">6.75×</option><option value="7">7×</option><option value="7.25">7.25×</option><option value="7.5">7.5×</option><option value="7.75">7.75×</option><option value="8">8×</option><option value="8.25">8.25×</option><option value="8.5">8.5×</option><option value="8.75">8.75×</option><option value="9">9×</option><option value="9.25">9.25×</option><option value="9.5">9.5×</option><option value="9.75">9.75×</option><option value="10">10×</option></select></label>
+        <button id="fullscreen" aria-label="Toggle fullscreen" title="Fullscreen (F)">⛶</button>
+      </div>
+      <div class="status-row"><span id="playback-status" role="status">Ready</span><span id="shortcut-feedback" role="status" aria-live="polite"></span><span>Seeking is approximate</span></div>
+      <div id="message" class="message" role="status" hidden></div><p id="speech-unavailable" class="message" hidden></p>
+    </div>
+  </section>
+  <aside class="transcript-panel" id="transcript-panel"><div class="transcript-header"><h2>Transcript</h2><button id="copy-transcript" aria-label="Copy transcript">Copy</button></div><div id="transcript-content"></div></aside>
+</main>
+<dialog id="settings-dialog"><div class="dialog-header"><h2>Voice</h2><button id="settings-close">Close</button></div><label for="voice">Narration voice</label><select id="voice" aria-label="Narration voice"><option>Loading voices…</option></select><p id="voice-note"></p><p class="muted">Changing the voice or speed restarts the current beat.</p></dialog>
+<dialog id="shortcuts-dialog"><div class="dialog-header"><h2>Keyboard shortcuts</h2><button id="shortcuts-close">Close</button></div>
+  <dl class="shortcuts">
+    <dt><kbd>Space</kbd> / <kbd>K</kbd></dt><dd>Play / pause</dd>
+    <dt><kbd>←</kbd> / <kbd>→</kbd></dt><dd>Back / forward ≈5 seconds</dd>
+    <dt><kbd>J</kbd> / <kbd>L</kbd></dt><dd>Back / forward ≈10 seconds</dd>
+    <dt><kbd>&lt;</kbd> / <kbd>&gt;</kbd></dt><dd>Slower / faster by 0.25×, from 0.25× to 10× (Shift + comma / period)</dd>
+    <dt><kbd>Shift + ←</kbd> / <kbd>Shift + →</kbd></dt><dd>Previous / next chapter</dd>
+    <dt><kbd>0</kbd>–<kbd>9</kbd></dt><dd>Seek to 0–90% of the estimated timeline</dd>
+    <dt><kbd>Home</kbd> / <kbd>End</kbd></dt><dd>First / last beat</dd>
+    <dt><kbd>T</kbd></dt><dd>Toggle transcript</dd><dt><kbd>F</kbd></dt><dd>Toggle fullscreen</dd>
+    <dt><kbd>?</kbd></dt><dd>Show shortcuts</dd><dt><kbd>Esc</kbd></dt><dd>Close a dialog / exit fullscreen</dd>
+  </dl><p class="muted">Shortcuts leave text fields and native controls alone. Speed changes restart the current beat and preserve paused state.</p>
+</dialog>
+<dialog id="sources-dialog"><div class="dialog-header"><h2>Sources & findings</h2><button id="sources-close">Close</button></div><p id="provenance" class="provenance"></p><h3>Findings</h3><div id="findings-list"></div><h3>Sources</h3><div id="all-sources"></div></dialog>
+
+<noscript>Enable JavaScript to use this briefing.</noscript>
+<!-- EDIT BRIEFING CONTENT HERE. The JSON is plain text; content edits need no rebuild. -->
+<script id="briefing-data" type="application/json">
+__CONTEXTCAST_DATA__
+</script>
+<!-- Reusable player. Mermaid loads from its pinned CDN only when a diagram is opened. -->
+<script>
+"use strict";
+(() => {
+  // src/player/timeline.ts
+  function timeline(data2, rate = 1) {
+    let start = 0;
+    return data2.scenes.flatMap((scene, sceneIndex) => scene.beats.map((beat, beatIndex) => {
+      const duration = (Math.max(2, beat.speech.split(/\s+/u).length * 60 / data2.settings.estimatedWordsPerMinute) + 0.35) / rate;
+      const entry = { sceneIndex, beatIndex, beat, start, duration };
+      start += duration;
+      return entry;
+    }));
+  }
+  var totalDuration = (entries) => entries.at(-1).start + entries.at(-1).duration;
+  function nearest(entries, seconds) {
+    return entries.reduce((best, e, i) => Math.abs(e.start - seconds) < Math.abs(entries[best].start - seconds) ? i : best, 0);
+  }
+  function skipTarget(entries, index, position, direction, seconds = 5) {
+    const candidate = nearest(entries, position + direction * seconds);
+    return direction < 0 ? Math.max(0, Math.min(candidate, index - 1)) : Math.min(entries.length - 1, Math.max(candidate, index + 1));
+  }
+  var formatTime = (seconds) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
+
+  // src/player/rates.ts
+  var playbackRates = Array.from({ length: 40 }, (_, index) => (index + 1) / 4);
+
+  // src/player/controller.ts
+  var PlaybackController = class {
+    constructor(data2, speech2, now = () => performance.now()) {
+      this.data = data2;
+      this.speech = speech2;
+      this.now = now;
+      this.entries = timeline(data2);
+    }
+    index = 0;
+    rate = 1;
+    status = "idle";
+    message = "";
+    voice;
+    entries;
+    generation = 0;
+    active = false;
+    deferredEnd = false;
+    startedAt = 0;
+    offset = 0;
+    clockRunning = false;
+    onChange = () => {
+    };
+    get entry() {
+      return this.entries[this.index];
+    }
+    get duration() {
+      return totalDuration(this.entries);
+    }
+    get position() {
+      if (this.status === "completed") return this.duration;
+      return this.entry.start + Math.min(this.entry.duration, this.offset + (this.clockRunning ? (this.now() - this.startedAt) / 1e3 : 0));
+    }
+    invalidate() {
+      this.generation++;
+      this.active = false;
+      this.deferredEnd = false;
+      this.clockRunning = false;
+      this.speech.cancel();
+    }
+    fail(message) {
+      this.invalidate();
+      this.status = "error";
+      this.message = message;
+      this.onChange();
+    }
+    play() {
+      if (this.status === "playing") return;
+      if (!this.speech.supported) {
+        this.fail("Narration is unavailable in this browser. Explore chapters and read the transcript.");
+        return;
+      }
+      if (!this.voice) {
+        this.fail("Choose a voice to listen. Local voices are preferred; remote voices require your explicit selection.");
+        return;
+      }
+      if (this.status === "completed") {
+        this.index = 0;
+        this.offset = 0;
+      }
+      this.message = "";
+      if (this.status === "paused" && this.deferredEnd) {
+        this.deferredEnd = false;
+        this.status = "playing";
+        this.advance();
+        return;
+      }
+      if (this.status === "paused" && this.active) {
+        this.status = "playing";
+        this.startedAt = this.now();
+        this.clockRunning = true;
+        this.speech.resume();
+        this.onChange();
+        return;
+      }
+      this.status = "playing";
+      this.speak();
+    }
+    pause() {
+      if (this.status !== "playing") return;
+      this.offset = this.position - this.entry.start;
+      this.clockRunning = false;
+      this.status = "paused";
+      this.speech.pause();
+      this.onChange();
+    }
+    toggle() {
+      this.status === "playing" ? this.pause() : this.play();
+    }
+    advance() {
+      this.active = false;
+      if (this.index === this.entries.length - 1) {
+        this.invalidate();
+        this.status = "completed";
+        this.onChange();
+        return;
+      }
+      this.index++;
+      this.offset = 0;
+      this.speak();
+    }
+    speak() {
+      this.invalidate();
+      this.offset = 0;
+      const token = this.generation;
+      this.active = true;
+      const valid = () => token === this.generation;
+      try {
+        this.speech.speak({
+          text: this.entry.beat.speech,
+          language: this.data.language,
+          rate: this.rate,
+          voice: this.voice,
+          start: () => {
+            if (!valid()) return;
+            this.startedAt = this.now();
+            this.clockRunning = this.status === "playing";
+            this.onChange();
+          },
+          end: () => {
+            if (!valid()) return;
+            this.generation++;
+            this.clockRunning = false;
+            this.active = false;
+            if (this.status === "paused") {
+              this.deferredEnd = true;
+              return;
+            }
+            if (this.status === "playing") this.advance();
+          },
+          error: (message) => {
+            if (valid()) this.fail(message);
+          }
+        });
+      } catch (error) {
+        if (valid()) this.fail(`Narration failed: ${String(error)}. The transcript remains available.`);
+      }
+      this.onChange();
+    }
+    seek(index) {
+      const playing = this.status === "playing";
+      this.invalidate();
+      this.index = Math.max(0, Math.min(this.entries.length - 1, index));
+      this.offset = 0;
+      this.status = playing ? "playing" : "paused";
+      this.message = "";
+      if (playing) this.speak();
+      else this.onChange();
+    }
+    seekTime(seconds) {
+      this.seek(nearest(this.entries, seconds));
+    }
+    skip(direction, seconds = 5) {
+      this.seek(skipTarget(this.entries, this.index, this.position, direction, seconds));
+    }
+    chapter(direction) {
+      const scene = Math.max(0, Math.min(this.data.scenes.length - 1, this.entry.sceneIndex + direction));
+      this.seek(this.entries.findIndex((e) => e.sceneIndex === scene));
+    }
+    setRate(rate) {
+      if (!playbackRates.includes(rate) || rate === this.rate) return;
+      this.rate = rate;
+      this.entries = timeline(this.data, rate);
+      if (this.status === "idle") {
+        this.onChange();
+        return;
+      }
+      this.seek(this.index);
+    }
+    setVoice(voice) {
+      this.voice = voice;
+      if (this.status === "idle") {
+        this.onChange();
+        return;
+      }
+      if (!voice && this.status === "playing") {
+        this.fail("The selected voice is unavailable. Choose a voice or continue reading.");
+        return;
+      }
+      this.seek(this.index);
+    }
+    dispose() {
+      this.invalidate();
+      this.status = "paused";
+    }
+  };
+
+  // src/player/speech.ts
+  var BrowserSpeech = class {
+    current;
+    supported = typeof window.speechSynthesis !== "undefined" && typeof window.SpeechSynthesisUtterance !== "undefined";
+    voices() {
+      return this.supported ? window.speechSynthesis.getVoices() : [];
+    }
+    onVoicesChanged(callback) {
+      if (!this.supported) return () => {
+      };
+      window.speechSynthesis.addEventListener("voiceschanged", callback);
+      return () => window.speechSynthesis.removeEventListener("voiceschanged", callback);
+    }
+    speak(request) {
+      const u = new SpeechSynthesisUtterance(request.text);
+      u.voice = this.voices().find((v) => v.voiceURI === request.voice.voiceURI) ?? null;
+      if (!u.voice) {
+        request.error("The selected voice disappeared. Choose an available voice.");
+        return;
+      }
+      u.lang = request.language;
+      u.rate = request.rate;
+      u.onstart = request.start;
+      u.onend = request.end;
+      u.onerror = (e) => request.error(`Browser narration stopped (${e.error}). You can retry Play or continue reading.`);
+      this.current = u;
+      window.speechSynthesis.resume();
+      window.speechSynthesis.speak(u);
+    }
+    cancel() {
+      if (this.supported) window.speechSynthesis.cancel();
+      this.current = void 0;
+    }
+    pause() {
+      if (this.supported) window.speechSynthesis.pause();
+    }
+    resume() {
+      if (this.supported) window.speechSynthesis.resume();
+    }
+  };
+
+  // src/renderers/scenes.ts
+  function element(tag, className = "", text = "") {
+    const el = document.createElement(tag);
+    el.className = className;
+    el.textContent = text;
+    return el;
+  }
+  var mermaidConfig = {
+    startOnLoad: false,
+    securityLevel: "strict",
+    theme: "dark",
+    suppressErrorRendering: true,
+    fontFamily: "Arial, sans-serif",
+    secure: ["securityLevel", "startOnLoad", "suppressErrorRendering", "maxTextSize", "fontFamily"],
+    flowchart: { htmlLabels: false },
+    themeVariables: { primaryColor: "#262a2e", primaryTextColor: "#e8e8e8", primaryBorderColor: "#8999a7", lineColor: "#8999a7", background: "#151617", fontSize: "16px" }
+  };
+  var mermaidURL = "https://cdn.jsdelivr.net/npm/mermaid@12.2.0/dist/mermaid.min.js";
+  var mermaidReady;
+  function loadMermaid() {
+    return mermaidReady ??= new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = mermaidURL;
+      script.async = true;
+      const timeout = setTimeout(() => {
+        script.remove();
+        reject(new Error("Diagram library timed out"));
+      }, 12e3);
+      script.onload = () => {
+        clearTimeout(timeout);
+        const mermaid = window.mermaid;
+        try {
+          mermaid.initialize(mermaidConfig);
+          resolve(mermaid);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      script.onerror = () => {
+        clearTimeout(timeout);
+        reject(new Error("Diagram CDN unavailable"));
+      };
+      document.head.append(script);
+    });
+  }
+  var diagrams = /* @__PURE__ */ new Map();
+  var diagramNumber = 0;
+  function renderDiagram(scene) {
+    if (!diagrams.has(scene.id)) {
+      const definition = scene.visual.definition;
+      const result = /%%\{|^\s*---/m.test(definition) || !/^\s*(flowchart|graph|sequenceDiagram)\b/.test(definition) ? Promise.reject(new Error("Use a flowchart or sequence diagram without configuration directives.")) : loadMermaid().then((mermaid) => mermaid.render(`diagram-${diagramNumber++}`, definition)).then((r) => r.svg);
+      result.catch(() => {
+      });
+      diagrams.set(scene.id, result);
+    }
+    return diagrams.get(scene.id);
+  }
+  function cards(items) {
+    const list = element("div", "cards");
+    for (const item of items) {
+      const card = element("div", "idea");
+      card.dataset.target = item.id;
+      card.append(element("h3", "", item.title));
+      if (item.body) card.append(element("p", "", item.body));
+      list.append(card);
+    }
+    return list;
+  }
+  function renderScene(scene) {
+    const root = element("div", `scene layout-${scene.layout}`);
+    switch (scene.layout) {
+      case "title":
+        root.append(element("h2", "hero-headline", scene.visual.headline), element("p", "hero-description", scene.visual.description), cards(scene.visual.items));
+        break;
+      case "bullets":
+        root.append(element("h2", "visual-title", scene.title), cards(scene.visual.items));
+        break;
+      case "comparison": {
+        root.append(element("h2", "visual-title", scene.title));
+        const columns = element("div", "comparison");
+        for (const [label, items] of [[scene.visual.beforeTitle, scene.visual.before], [scene.visual.afterTitle, scene.visual.after]]) {
+          const col = element("section", "comparison-column");
+          col.append(element("h3", "column-label", label), cards([...items]));
+          columns.append(col);
+        }
+        root.append(columns);
+        break;
+      }
+      case "code": {
+        root.append(element("p", "code-description", scene.visual.description));
+        const frame = element("div", "code-frame");
+        frame.append(element("div", "code-filename", `${scene.visual.filename}  \xB7  ${scene.visual.language}`));
+        const pre = element("pre");
+        pre.setAttribute("aria-label", scene.visual.description);
+        scene.visual.code.split("\n").forEach((line, index) => {
+          const num = scene.visual.startLine + index;
+          const row = element("span", "code-line");
+          row.dataset.target = `line-${num}`;
+          if (scene.visual.highlights.some(([a, b]) => num >= a && num <= b)) row.classList.add("highlight-line");
+          row.append(element("span", "line-number", String(num)), element("code", "", line || " "));
+          pre.append(row);
+        });
+        frame.append(pre);
+        root.append(frame);
+        break;
+      }
+      case "finding": {
+        const f = scene.visual;
+        root.append(element("div", "finding-meta", `${f.severity.toUpperCase()} PRIORITY  /  ${f.status.toUpperCase()}`), element("h2", "hero-headline", f.headline), element("p", "finding-detail", f.detail));
+        const recommendation = element("div", "recommendation");
+        recommendation.append(element("span", "column-label", "PROPOSED REVIEW COMMENT"), element("p", "", f.recommendation));
+        root.append(recommendation);
+        break;
+      }
+      case "diagram": {
+        root.append(element("p", "diagram-description", scene.visual.description));
+        const host = element("div", "diagram-host", "Rendering diagram\u2026");
+        host.setAttribute("role", "img");
+        host.setAttribute("aria-label", scene.visual.description);
+        root.append(host);
+        void renderDiagram(scene).then((svg) => {
+          const parsed = new DOMParser().parseFromString(svg, "image/svg+xml");
+          const node = parsed.documentElement;
+          if (node.nodeName.toLowerCase() !== "svg") throw new Error("Diagram did not produce an SVG");
+          host.replaceChildren(document.importNode(node, true));
+        }).catch(() => {
+          host.removeAttribute("role");
+          host.replaceChildren(element("p", "diagram-error", "Diagram unavailable (CDN or syntax error). Description and source are still available."), element("pre", "diagram-source", scene.visual.definition));
+        });
+        break;
+      }
+    }
+    return root;
+  }
+  function applyCues(root, scene, beatIndex) {
+    const beats = scene.beats.slice(0, beatIndex + 1);
+    const revealTargets = new Set(scene.beats.flatMap((b) => b.cue?.type === "reveal" ? [b.cue.target] : []));
+    const revealed = new Set(beats.flatMap((b) => b.cue?.type === "reveal" ? [b.cue.target] : []));
+    const cue = scene.beats[beatIndex].cue;
+    root.querySelectorAll("[data-target]").forEach((el) => {
+      el.classList.toggle("focused", cue?.type === "focus" && cue.target === el.dataset.target);
+      el.hidden = revealTargets.has(el.dataset.target) && !revealed.has(el.dataset.target);
+    });
+    root.querySelector(".beat-callout")?.remove();
+    if (cue && cue.type !== "none") {
+      const hasTarget = cue.type === "focus" && [...root.querySelectorAll("[data-target]")].some((el) => el.dataset.target === cue.target);
+      const text = cue.type === "callout" ? cue.text : cue.type === "focus" && !hasTarget && scene.layout === "diagram" ? cue.target.replaceAll("-", " ") : "";
+      if (text) root.append(element("div", "beat-callout", text));
+    }
+  }
+
+  // .agents/skills/contextcast/scripts/validate.mjs
+  function validateBriefing(input) {
+    const d = structuredClone(input);
+    const fail = (message) => {
+      throw new Error(message);
+    };
+    const object = (value, required, optional = []) => {
+      if (!value || typeof value !== "object" || Array.isArray(value)) fail("Expected an object");
+      for (const key of required) if (!(key in value)) fail(`Missing field: ${key}`);
+      for (const key of Object.keys(value)) if (![...required, ...optional].includes(key)) fail(`Unknown field: ${key}`);
+    };
+    const text = (value) => typeof value === "string" && value.trim().length > 0;
+    const string = (value, field) => {
+      if (!text(value)) fail(`Expected nonempty text: ${field}`);
+      return value.trim();
+    };
+    const choice = (value, choices) => {
+      if (!choices.includes(value)) fail(`Expected one of ${choices.join(", ")}; got ${value}`);
+    };
+    const array = (value, min = 0, max = Infinity) => {
+      if (!Array.isArray(value) || value.length < min || value.length > max) fail(`Expected array with ${min}\u2013${max} entries`);
+    };
+    const integer = (value) => {
+      if (!Number.isInteger(value) || value < 1) fail("Expected positive integer");
+    };
+    const ids = /* @__PURE__ */ new Set();
+    const refId = (value) => {
+      if (!text(value) || !/^[a-zA-Z][a-zA-Z0-9_-]*$/.test(value.trim())) fail(`Invalid identifier: ${value}`);
+      return value.trim();
+    };
+    const id = (value) => {
+      const name = refId(value);
+      if (ids.has(name)) fail(`Duplicate ID: ${name}`);
+      ids.add(name);
+      return name;
+    };
+    const items = (value, max = Infinity) => {
+      array(value, 1, max);
+      value.forEach((item) => {
+        object(item, ["id", "title"], ["body"]);
+        item.id = id(item.id);
+        item.title = string(item.title, "title");
+        if ("body" in item) item.body = string(item.body, "body");
+      });
+    };
+    object(d, ["schemaVersion", "id", "title", "kind", "subtitle", "provenance", "scenes"], ["language", "settings", "sources"]);
+    if (d.schemaVersion !== "1") fail(`Unsupported schemaVersion ${d.schemaVersion}. Migrate the input explicitly to version 1.`);
+    d.id = id(d.id);
+    for (const key of ["title", "subtitle", "provenance"]) d[key] = string(d[key], key);
+    choice(d.kind, ["pr-review", "architecture", "initiative", "implementation"]);
+    d.language = string(d.language === void 0 ? "en-US" : d.language, "language");
+    if (d.settings === void 0) d.settings = {};
+    object(d.settings, [], ["estimatedWordsPerMinute"]);
+    if (d.settings.estimatedWordsPerMinute === void 0) d.settings.estimatedWordsPerMinute = 150;
+    const wpm = d.settings.estimatedWordsPerMinute;
+    if (typeof wpm !== "number" || !Number.isFinite(wpm) || wpm < 80 || wpm > 240) fail("Words per minute must be 80\u2013240");
+    if (d.sources === void 0) d.sources = [];
+    array(d.sources);
+    d.sources.forEach((source) => {
+      object(source, ["id", "label"], ["url", "excerpt"]);
+      source.id = id(source.id);
+      source.label = string(source.label, "label");
+      if ("excerpt" in source) source.excerpt = string(source.excerpt, "excerpt");
+      if ("url" in source) {
+        let url;
+        try {
+          url = new URL(source.url);
+        } catch {
+          fail("Invalid evidence URL");
+        }
+        if (typeof source.url !== "string" || url.protocol !== "https:" || url.username || url.password) fail("Only HTTPS evidence URLs without credentials are allowed");
+      }
+      if (!source.url && !source.excerpt) fail("A source needs a URL or excerpt");
+    });
+    const sources = new Set(d.sources.map((s) => s.id));
+    array(d.scenes, 1);
+    d.scenes.forEach((scene) => {
+      object(scene, ["id", "title", "layout", "visual", "beats"], ["eyebrow"]);
+      scene.id = id(scene.id);
+      scene.title = string(scene.title, "title");
+      if ("eyebrow" in scene) scene.eyebrow = string(scene.eyebrow, "eyebrow");
+      const v = scene.visual;
+      switch (scene.layout) {
+        case "title":
+          object(v, ["headline", "description", "items"]);
+          items(v.items, 6);
+          break;
+        case "bullets":
+          object(v, ["items"]);
+          items(v.items, 8);
+          break;
+        case "diagram":
+          object(v, ["definition", "description"]);
+          break;
+        case "code":
+          object(v, ["language", "filename", "code", "startLine", "description"], ["highlights"]);
+          integer(v.startLine);
+          if (v.highlights === void 0) v.highlights = [];
+          array(v.highlights);
+          v.highlights.forEach((range) => {
+            array(range, 2, 2);
+            range.forEach(integer);
+            if (range[1] < range[0]) fail("Line range must be ascending");
+          });
+          break;
+        case "comparison":
+          object(v, ["beforeTitle", "afterTitle", "before", "after"]);
+          items(v.before);
+          items(v.after);
+          break;
+        case "finding":
+          object(v, ["status", "severity", "headline", "detail", "recommendation"]);
+          choice(v.status, ["confirmed", "potential", "needs verification"]);
+          choice(v.severity, ["high", "medium", "low", "info"]);
+          break;
+        default:
+          fail(`Unknown layout: ${scene.layout}`);
+      }
+      for (const [key, value] of Object.entries(v)) if (!["items", "before", "after", "startLine", "highlights"].includes(key)) v[key] = string(value, key);
+      array(scene.beats, 1);
+      scene.beats.forEach((beat) => {
+        object(beat, ["id", "speech"], ["caption", "cue", "sourceIds"]);
+        beat.id = id(beat.id);
+        beat.speech = string(beat.speech, "speech");
+        if (/```|\]\(|^\s*#{1,6}\s|\*\*[^*]+\*\*/m.test(beat.speech)) fail("Speech must be plain text, without Markdown");
+        if ("caption" in beat) beat.caption = string(beat.caption, "caption");
+        if ("cue" in beat) {
+          const cue = beat.cue;
+          choice(cue?.type, ["none", "focus", "reveal", "callout"]);
+          object(cue, cue.type === "none" ? ["type"] : cue.type === "callout" ? ["type", "text"] : ["type", "target"]);
+          if (cue.type === "callout") cue.text = string(cue.text, "cue.text");
+          if (cue.type === "focus" || cue.type === "reveal") cue.target = refId(cue.target);
+        }
+        if (beat.sourceIds === void 0) beat.sourceIds = [];
+        array(beat.sourceIds);
+        beat.sourceIds = beat.sourceIds.map((value) => {
+          const ref = refId(value);
+          if (!sources.has(ref)) fail(`Unknown source: ${ref}`);
+          return ref;
+        });
+      });
+    });
+    return d;
+  }
+
+  // src/player/app.ts
+  function readBriefing() {
+    const source = document.querySelector("#briefing-data").textContent;
+    try {
+      return validateBriefing(JSON.parse(source));
+    } catch (error) {
+      document.body.replaceChildren(element("h1", "", "Invalid briefing data"), element("p", "message", String(error)), element("pre", "diagram-source", source));
+      throw error;
+    }
+  }
+  var data = readBriefing();
+  var $ = (selector) => document.querySelector(selector);
+  var speech = new BrowserSpeech();
+  var player = new PlaybackController(data, speech);
+  var store = {
+    get(key) {
+      try {
+        return localStorage.getItem(`contextcast:${key}`);
+      } catch {
+        return null;
+      }
+    },
+    set(key, value) {
+      try {
+        localStorage.setItem(`contextcast:${key}`, value);
+      } catch {
+      }
+    }
+  };
+  document.title = `${data.title} \xB7 ContextCast`;
+  document.documentElement.lang = data.language;
+  $("#briefing-title").textContent = data.title;
+  $("#provenance").textContent = data.provenance;
+  var speed = $("#speed");
+  var savedRate = Number(store.get("rate"));
+  if (playbackRates.includes(savedRate)) {
+    player.setRate(savedRate);
+    speed.value = String(savedRate);
+  }
+  var voiceSelect = $("#voice");
+  function refreshVoices() {
+    const voices = speech.voices();
+    const previous = player.voice;
+    const preferred = voices.find((v) => v.localService === true && v.voiceURI === store.get("voice")) ?? voices.find((v) => v.localService === true && v.lang.toLowerCase() === data.language.toLowerCase()) ?? voices.find((v) => v.localService === true && v.lang.split("-")[0] === data.language.split("-")[0]) ?? voices.find((v) => v.localService === true);
+    const selected = previous ? voices.find((v) => v.voiceURI === previous.voiceURI && v.localService === previous.localService) : preferred;
+    voiceSelect.replaceChildren(new Option("Text only \xB7 choose a voice", ""));
+    voices.forEach((v) => voiceSelect.add(new Option(`${v.name} \xB7 ${v.lang} \xB7 ${v.localService === true ? "local" : v.localService === false ? "remote" : "unknown service"}`, v.voiceURI)));
+    if (selected) voiceSelect.value = selected.voiceURI;
+    if (selected?.voiceURI !== previous?.voiceURI) player.setVoice(selected);
+    $("#voice-note").textContent = !speech.supported ? "Browser narration unavailable. Text-only navigation is ready." : selected ? selected.localService === true ? "Local voice reported by your browser. Speech stays with your browser / OS." : "Remote or unknown voice selected for this session. Text may be sent to its provider." : voices.length ? "Select a voice to listen. Remote voices may send narration to their provider." : "No voices available yet. You can read and navigate the full briefing.";
+    $("#speech-unavailable").hidden = !!selected;
+    $("#speech-unavailable").textContent = !speech.supported ? "Narration unavailable in this browser. The transcript is available." : "No voice selected. Open Voice to choose one, or read the transcript.";
+  }
+  speech.onVoicesChanged(refreshVoices);
+  voiceSelect.addEventListener("change", () => {
+    const voice = speech.voices().find((v) => v.voiceURI === voiceSelect.value);
+    if (voice && voice.localService !== true && !window.confirm("This voice is remote or its service is unknown. Narration text may be sent to its provider. Use it for this session?")) {
+      voiceSelect.value = player.voice?.voiceURI ?? "";
+      return;
+    }
+    player.setVoice(voice);
+    if (voice?.localService === true) store.set("voice", voice.voiceURI);
+    $("#speech-unavailable").hidden = !!voice;
+    $("#voice-note").textContent = voice ? `${voice.localService === true ? "Local" : "Remote / unknown"} voice selected. Changing voice or speed restarts the current beat.` : "Text-only mode. Choose a voice to listen.";
+  });
+  var feedbackTimer;
+  function feedback(text) {
+    $("#shortcut-feedback").textContent = text;
+    clearTimeout(feedbackTimer);
+    feedbackTimer = setTimeout(() => {
+      $("#shortcut-feedback").textContent = "";
+    }, 1800);
+  }
+  function changeSpeed(value) {
+    player.setRate(value);
+    speed.value = String(player.rate);
+    store.set("rate", speed.value);
+    feedback(`${player.rate}\xD7`);
+  }
+  speed.addEventListener("change", () => changeSpeed(Number(speed.value)));
+  var chapterButtons = [];
+  var transcriptButtons = [];
+  data.scenes.forEach((scene, sceneIndex) => {
+    const index = player.entries.findIndex((e) => e.sceneIndex === sceneIndex);
+    const button = element("button", "chapter");
+    button.type = "button";
+    button.append(element("span", "chapter-number", String(sceneIndex + 1).padStart(2, "0")), element("span", "chapter-name", scene.title), element("span", "chapter-time", `\u2248 ${formatTime(player.entries[index].start)}`));
+    button.addEventListener("click", () => player.seek(index));
+    $("#chapters").append(button);
+    chapterButtons.push(button);
+    const heading = element("h3", "transcript-heading", `${String(sceneIndex + 1).padStart(2, "0")}  ${scene.title}`);
+    $("#transcript-content").append(heading);
+    scene.beats.forEach((beat) => {
+      const beatIndex = player.entries.findIndex((e) => e.beat.id === beat.id);
+      const line = element("button", "transcript-beat", beat.speech);
+      line.type = "button";
+      line.dataset.beat = beat.id;
+      line.addEventListener("click", () => player.seek(beatIndex));
+      $("#transcript-content").append(line);
+      transcriptButtons.push(line);
+    });
+  });
+  function sourceLink(id) {
+    const source = data.sources.find((s) => s.id === id);
+    if (!source.url) {
+      const button = element("button", "source-link", `${source.label} \u2922`);
+      button.addEventListener("click", () => {
+        if (!sourcesDialog.open) sourcesDialog.showModal();
+        document.getElementById(`source-${id}`)?.scrollIntoView({ block: "center" });
+      });
+      return button;
+    }
+    const link = element("a", "source-link", `${source.label} \u2197`);
+    link.href = source.url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    return link;
+  }
+  data.sources.forEach((source) => {
+    const block = element("div", "source-block");
+    block.id = `source-${source.id}`;
+    block.append(source.url ? sourceLink(source.id) : element("strong", "source-link", source.label));
+    if (source.excerpt) block.append(element("pre", "source-excerpt", source.excerpt));
+    $("#all-sources").append(block);
+  });
+  if (!data.sources.length) $("#all-sources").append(element("p", "muted", "No external sources supplied. See the provenance note."));
+  var findings = data.scenes.filter((s) => s.layout === "finding");
+  findings.forEach((s) => {
+    const card = element("button", "finding-summary");
+    card.append(element("span", "column-label", `${s.visual.severity} \xB7 ${s.visual.status}`), element("strong", "", s.visual.headline));
+    card.addEventListener("click", () => player.seek(player.entries.findIndex((e) => data.scenes[e.sceneIndex].id === s.id)));
+    $("#findings-list").append(card);
+  });
+  if (!findings.length) $("#findings-list").textContent = "No review findings in this briefing.";
+  var renderedScene = -1;
+  var selectedIndex = -1;
+  var progress = $("#progress");
+  function render() {
+    const entry = player.entry;
+    const scene = data.scenes[entry.sceneIndex];
+    if (renderedScene !== entry.sceneIndex) {
+      $("#stage-content").replaceChildren(renderScene(scene));
+      renderedScene = entry.sceneIndex;
+      $("#scene-title").textContent = scene.title;
+      $("#scene-position").textContent = `${entry.sceneIndex + 1} / ${data.scenes.length}`;
+    }
+    applyCues($("#stage-content"), scene, entry.beatIndex);
+    chapterButtons.forEach((b, i) => {
+      b.setAttribute("aria-current", i === entry.sceneIndex ? "step" : "false");
+      b.querySelector(".chapter-time").textContent = `\u2248 ${formatTime(player.entries.find((e) => e.sceneIndex === i).start)}`;
+    });
+    transcriptButtons.forEach((b, i) => b.setAttribute("aria-current", i === player.index ? "true" : "false"));
+    if (selectedIndex !== player.index) {
+      $("#stage-caption").textContent = entry.beat.caption ?? "";
+      $("#stage-caption").hidden = !entry.beat.caption;
+      const sources = $("#scene-sources");
+      sources.replaceChildren(...entry.beat.sourceIds.map(sourceLink));
+      const active = transcriptButtons[player.index];
+      const pane = $("#transcript-content");
+      if (player.status === "playing" && !pane.matches(":hover") && !pane.contains(document.activeElement)) {
+        const a = active.getBoundingClientRect(), p = pane.getBoundingClientRect();
+        if (a.top < p.top || a.bottom > p.bottom) pane.scrollTop += a.top - p.top - 50;
+      }
+      selectedIndex = player.index;
+    }
+    $("#play").textContent = player.status === "playing" ? "Pause" : player.status === "completed" ? "Replay" : "Play";
+    $("#play").setAttribute("aria-pressed", String(player.status === "playing"));
+    $("#play").setAttribute("aria-disabled", String(!speech.supported || !player.voice));
+    $("#play").toggleAttribute("disabled", !speech.supported || !player.voice);
+    $("#playback-status").textContent = player.status === "completed" ? "Briefing complete" : player.status === "playing" ? "Narrating" : player.status === "paused" ? "Paused" : "Ready when you are";
+    $("#message").textContent = player.message;
+    $("#message").hidden = !player.message;
+    $("#previous-chapter").toggleAttribute("disabled", entry.sceneIndex === 0);
+    $("#next-chapter").toggleAttribute("disabled", entry.sceneIndex === data.scenes.length - 1);
+    tick();
+  }
+  function tick() {
+    progress.max = String(player.duration);
+    progress.value = String(player.position);
+    progress.style.setProperty("--progress", `${100 * player.position / player.duration}%`);
+    progress.setAttribute("aria-valuetext", `Approximately ${formatTime(player.position)} of ${formatTime(player.duration)}. Seeks to narration beats.`);
+    $("#elapsed").textContent = `\u2248 ${formatTime(player.position)}`;
+    $("#duration").textContent = `\u2248 ${formatTime(player.duration)}`;
+  }
+  player.onChange = render;
+  $("#play").addEventListener("click", () => player.toggle());
+  $("#back").addEventListener("click", () => player.skip(-1));
+  $("#forward").addEventListener("click", () => player.skip(1));
+  $("#previous-chapter").addEventListener("click", () => player.chapter(-1));
+  $("#next-chapter").addEventListener("click", () => player.chapter(1));
+  progress.addEventListener("input", () => player.seekTime(Number(progress.value)));
+  function toggleTranscript() {
+    const pane = $("#transcript-panel");
+    pane.hidden = !pane.hidden;
+    $("#transcript-toggle").setAttribute("aria-expanded", String(!pane.hidden));
+    $(".workspace").classList.toggle("transcript-hidden", pane.hidden);
+  }
+  $("#transcript-toggle").addEventListener("click", toggleTranscript);
+  var sourcesDialog = $("#sources-dialog");
+  $("#sources-toggle").addEventListener("click", () => sourcesDialog.showModal());
+  $("#sources-close").addEventListener("click", () => sourcesDialog.close());
+  var settingsDialog = $("#settings-dialog");
+  $("#settings-toggle").addEventListener("click", () => settingsDialog.showModal());
+  $("#settings-close").addEventListener("click", () => settingsDialog.close());
+  var shortcutsDialog = $("#shortcuts-dialog");
+  $("#shortcuts-toggle").addEventListener("click", () => shortcutsDialog.showModal());
+  $("#shortcuts-close").addEventListener("click", () => shortcutsDialog.close());
+  async function toggleFullscreen() {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await document.documentElement.requestFullscreen();
+    } catch {
+      feedback("Fullscreen unavailable");
+    }
+  }
+  $("#fullscreen").addEventListener("click", toggleFullscreen);
+  $("#copy-transcript").addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(data.scenes.map((s) => `${s.title}
+${s.beats.map((b) => b.speech).join("\n")}`).join("\n\n"));
+      $("#copy-transcript").textContent = "Copied";
+    } catch {
+      $("#copy-transcript").textContent = "Select text to copy";
+    }
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || event.isComposing || document.querySelector("dialog[open]")) return;
+    const target = event.target instanceof Element ? event.target : null;
+    if (target?.closest("input, select, textarea, [contenteditable]:not([contenteditable=false]), [role=textbox]")) return;
+    const key = event.key.toLowerCase();
+    if (key === " " && target?.closest("button, a, summary, [role=button]")) return;
+    if (event.repeat && [" ", "k", "t", "f", "?"].includes(key)) {
+      event.preventDefault();
+      return;
+    }
+    if (key === " " || key === "k") player.toggle();
+    else if (key === "arrowleft" || key === "arrowright") {
+      const direction = key === "arrowleft" ? -1 : 1;
+      event.shiftKey ? player.chapter(direction) : player.skip(direction);
+    } else if (key === "j" || key === "l") player.skip(key === "j" ? -1 : 1, 10);
+    else if (key === "<" || key === ">") {
+      const index = playbackRates.indexOf(player.rate);
+      changeSpeed(playbackRates[Math.max(0, Math.min(playbackRates.length - 1, index + (key === ">" ? 1 : -1)))]);
+    } else if (/^[0-9]$/.test(key)) player.seekTime(player.duration * Number(key) / 10);
+    else if (key === "home") player.seek(0);
+    else if (key === "end") player.seek(player.entries.length - 1);
+    else if (key === "t") toggleTranscript();
+    else if (key === "f") void toggleFullscreen();
+    else if (key === "?") shortcutsDialog.showModal();
+    else return;
+    event.preventDefault();
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) player.pause();
+  });
+  window.addEventListener("pagehide", () => player.dispose());
+  refreshVoices();
+  render();
+  setInterval(tick, 200);
+})();
+
+</script>
+</body>
+</html>

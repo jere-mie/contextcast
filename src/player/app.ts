@@ -3,8 +3,17 @@ import { PlaybackController, playbackRates } from './controller';
 import { BrowserSpeech } from './speech';
 import { formatTime } from './timeline';
 import { renderScene, applyCues, element } from '../renderers/scenes';
+import { validateBriefing } from '../../.agents/skills/contextcast/scripts/validate.mjs';
 
-const data: Briefing = JSON.parse(document.querySelector('#briefing-data')!.textContent!);
+function readBriefing(): Briefing {
+  const source = document.querySelector('#briefing-data')!.textContent!;
+  try { return validateBriefing(JSON.parse(source)) as Briefing; }
+  catch (error) {
+    document.body.replaceChildren(element('h1', '', 'Invalid briefing data'), element('p', 'message', String(error)), element('pre', 'diagram-source', source));
+    throw error;
+  }
+}
+const data = readBriefing();
 const $ = <T extends HTMLElement = HTMLElement>(selector: string) => document.querySelector<T>(selector)!;
 const speech = new BrowserSpeech();
 const player = new PlaybackController(data, speech);
@@ -13,6 +22,7 @@ const store = {
   set(key: string, value: string) { try { localStorage.setItem(`contextcast:${key}`, value); } catch {} },
 };
 document.title = `${data.title} · ContextCast`;
+document.documentElement.lang = data.language;
 $('#briefing-title').textContent = data.title;
 $('#provenance').textContent = data.provenance;
 const speed = $<HTMLSelectElement>('#speed');

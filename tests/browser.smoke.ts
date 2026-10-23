@@ -5,7 +5,7 @@ import { pathToFileURL } from 'node:url';
 import { resolve, join } from 'node:path';
 import { mkdtemp, writeFile, rm, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { compile } from '../scripts/build-briefing';
+import { compile, safeJSON } from '../scripts/build-briefing';
 import { sample } from './helpers';
 let browser: Browser;
 let temp: string;
@@ -39,11 +39,12 @@ async function mockedPage(options: { remote?: boolean; missing?: boolean; storag
   })();` });
   return { context, page: await context.newPage() };
 }
-test('real browser opens file offline, every scene renders, flowchart and sequence render', async () => {
-  const context = await browser.newContext({ offline: true, viewport: { width: 1440, height: 900 } });
+test('real browser opens a small local file and loads pinned CDN diagrams only on demand', async () => {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await context.newPage(); const errors: string[] = [], requests: string[] = [];
   page.on('pageerror', e => errors.push(e.message)); page.on('request', r => { if (/^https?:/.test(r.url())) requests.push(r.url()); });
   await page.goto(file()); await page.locator('.idea').first().waitFor();
+  assert.deepEqual(requests, [], 'No dependency load before opening a diagram');
   await mkdir('test-results', { recursive: true });
   await page.screenshot({ path: `test-results/pr-review-${process.env.CONTEXTCAST_BROWSER ?? 'chrome'}.png`, fullPage: true, animations: 'disabled' });
   assert.equal(await page.locator('.chapter').count(), 8); assert.equal(await page.locator('.transcript-beat').count(), 48);
@@ -60,9 +61,36 @@ test('real browser opens file offline, every scene renders, flowchart and sequen
   const controls = await page.locator('.transport').boundingBox(); assert.ok(controls && controls.y + controls.height <= 720);
   await page.setViewportSize({ width: 390, height: 844 }); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
   await page.goto(file('example-architecture.html')); await page.locator('.chapter').nth(1).click(); await page.locator('.diagram-host svg').waitFor();
-  assert.deepEqual(errors, []); assert.deepEqual(requests, []);
+  assert.deepEqual(errors, []);
+  assert.equal(requests.length, 2, 'One library request per opened briefing');
+  assert.ok(requests.every(url => url === 'https://cdn.jsdelivr.net/npm/mermaid@12.2.0/dist/mermaid.min.js'));
   console.log('Native speech support:', await page.evaluate(() => ({ supported: !!window.speechSynthesis, voices: window.speechSynthesis?.getVoices().length, userAgent: navigator.userAgent })));
   await context.close();
+});
+test('CDN failure preserves visuals, transcript, navigation, and readable diagram source', async () => {
+  const { page, context } = await mockedPage();
+  await context.route('https://cdn.jsdelivr.net/**', route => route.abort());
+  await page.goto(file()); await page.locator('.chapter').nth(2).click(); await page.locator('.diagram-error').waitFor();
+  assert.match(await page.locator('.diagram-source').textContent() ?? '', /flowchart LR/);
+  assert.equal(await page.locator('.transcript-beat').count(), 48);
+  await page.locator('.chapter').nth(4).click(); assert.equal(await page.locator('.code-line').count(), 12);
+  await page.locator('#play').click(); assert.equal(await page.locator('#play').textContent(), 'Pause');
+  await context.close();
+});
+test('agents can edit embedded JSON and player code directly without rebuilding or updating hashes', async () => {
+  const original = await compile(sample());
+  const edited = sample(); edited.title = 'Edited directly in HTML'; edited.scenes[0].beats[0].speech = 'This narration was edited directly in the HTML file without running a build step.';
+  // No compiler runs after this edit; both data and inline player text change.
+  const html = original.replace(/(<script id="briefing-data" type="application\/json">)[\s\S]*?(<\/script>)/, (_, open, close) => open + safeJSON(edited) + close)
+    .replaceAll('Ready when you are', 'Ready');
+  const path = join(temp, 'edited.html'); await writeFile(path, html);
+  const { page, context } = await mockedPage(); const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
+  await page.goto(pathToFileURL(path).href); await page.locator('.scene').waitFor();
+  assert.equal(await page.locator('#briefing-title').textContent(), edited.title);
+  assert.equal(await page.locator('#playback-status').textContent(), 'Ready');
+  await page.locator('#play').click();
+  assert.equal(await page.evaluate(() => (window as any).mockSpeech.current.text), edited.scenes[0].beats[0].speech);
+  assert.deepEqual(errors, []); await context.close();
 });
 test('native local-voice attempt completes or exposes a recoverable browser error', async () => {
   const d = sample(); d.scenes = [d.scenes[0]]; d.scenes[0].beats = [{ id: 'native-one', speech: 'This is a ContextCast voice check.', sourceIds: [] }];

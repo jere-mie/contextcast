@@ -1,14 +1,32 @@
-import mermaid from 'mermaid';
 import type { Scene } from '../schema/briefing';
+import type { MermaidConfig } from 'mermaid';
 
 export function element<K extends keyof HTMLElementTagNameMap>(tag: K, className = '', text = '') {
   const el = document.createElement(tag); el.className = className; el.textContent = text; return el;
 }
-mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'dark',
+const mermaidConfig: MermaidConfig = { startOnLoad: false, securityLevel: 'strict', theme: 'dark',
   suppressErrorRendering: true, fontFamily: 'Arial, sans-serif',
   secure: ['securityLevel', 'startOnLoad', 'suppressErrorRendering', 'maxTextSize', 'fontFamily'],
   flowchart: { htmlLabels: false }, themeVariables: { primaryColor: '#262a2e', primaryTextColor: '#e8e8e8', primaryBorderColor: '#8999a7', lineColor: '#8999a7', background: '#151617', fontSize: '16px' },
-});
+};
+export const mermaidURL = 'https://cdn.jsdelivr.net/npm/mermaid@12.2.0/dist/mermaid.min.js';
+type Mermaid = (typeof import('mermaid'))['default'];
+let mermaidReady: Promise<Mermaid> | undefined;
+function loadMermaid(): Promise<Mermaid> {
+  return mermaidReady ??= new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = mermaidURL; script.async = true;
+    const timeout = setTimeout(() => { script.remove(); reject(new Error('Diagram library timed out')); }, 12000);
+    script.onload = () => {
+      clearTimeout(timeout);
+      const mermaid = (window as unknown as { mermaid: Mermaid }).mermaid;
+      try { mermaid.initialize(mermaidConfig); resolve(mermaid); }
+      catch (error) { reject(error); }
+    };
+    script.onerror = () => { clearTimeout(timeout); reject(new Error('Diagram CDN unavailable')); };
+    document.head.append(script);
+  });
+}
 const diagrams = new Map<string, Promise<string>>();
 let diagramNumber = 0;
 function renderDiagram(scene: Extract<Scene, { layout: 'diagram' }>) {
@@ -17,7 +35,7 @@ function renderDiagram(scene: Extract<Scene, { layout: 'diagram' }>) {
     const definition = scene.visual.definition;
     const result = /%%\{|^\s*---/m.test(definition) || !/^\s*(flowchart|graph|sequenceDiagram)\b/.test(definition)
       ? Promise.reject(new Error('Use a flowchart or sequence diagram without configuration directives.'))
-      : mermaid.render(`diagram-${diagramNumber++}`, definition).then(r => r.svg);
+      : loadMermaid().then(mermaid => mermaid.render(`diagram-${diagramNumber++}`, definition)).then(r => r.svg);
     // Cache both success and failure, rendering at most once per scene.
     result.catch(() => {}); diagrams.set(scene.id, result);
   }
@@ -73,7 +91,7 @@ export function renderScene(scene: Scene) {
         if (node.nodeName.toLowerCase() !== 'svg') throw new Error('Diagram did not produce an SVG');
         host.replaceChildren(document.importNode(node, true));
       }).catch(() => {
-        host.removeAttribute('role'); host.replaceChildren(element('p', 'diagram-error', 'Diagram unavailable. Read the diagram source below.'), element('pre', 'diagram-source', scene.visual.definition));
+        host.removeAttribute('role'); host.replaceChildren(element('p', 'diagram-error', 'Diagram unavailable (CDN or syntax error). Description and source are still available.'), element('pre', 'diagram-source', scene.visual.definition));
       }); break;
     }
   }

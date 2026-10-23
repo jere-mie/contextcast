@@ -2,8 +2,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { validateBriefing } from '../src/schema/briefing';
 import { sample } from './helpers';
+import { validateBriefing as validatePortable } from '../.agents/skills/contextcast/scripts/validate.mjs';
 test('validates all six layouts and preserves the complete transcript', () => {
   const data = validateBriefing(sample()); assert.equal(new Set(data.scenes.map(s => s.layout)).size, 6);
+  assert.deepEqual(validatePortable(sample()), data);
   assert.equal(data.scenes.flatMap(s => s.beats).length, 48);
 });
 for (const [name, mutate] of Object.entries<Record<string, (d: any) => void>[string]>({
@@ -11,6 +13,9 @@ for (const [name, mutate] of Object.entries<Record<string, (d: any) => void>[str
   'empty scenes': d => { d.scenes = []; },
   'empty beats': d => { d.scenes[0].beats = []; },
   'empty speech': d => { d.scenes[0].beats[0].speech = '  '; },
+  'null settings': d => { d.settings = null; },
+  'null sources': d => { d.sources = null; },
+  'null references': d => { d.scenes[0].beats[0].sourceIds = null; },
   'unknown layout': d => { d.scenes[0].layout = 'arbitrary'; },
   'mismatched visual': d => { d.scenes[0].visual = { code: 'x' }; },
   'broken reference': d => { d.scenes[0].beats[0].sourceIds = ['missing']; },
@@ -24,7 +29,7 @@ for (const [name, mutate] of Object.entries<Record<string, (d: any) => void>[str
   'audio payload': d => { d.audio = 'data:audio/wav;base64,abc'; },
   'Markdown narration': d => { d.scenes[0].beats[0].speech = 'Read **this** finding'; },
   'reversed line ranges': d => { d.scenes[4].visual.highlights = [[50, 40]]; },
-})) test(`rejects ${name}`, () => { const data = sample(); mutate(data); assert.throws(() => validateBriefing(data)); });
+})) test(`rejects ${name}`, () => { const data = sample(); mutate(data); assert.throws(() => validateBriefing(data)); assert.throws(() => validatePortable(data)); });
 test('unknown versions offer an explicit migration error', () => {
   assert.throws(() => validateBriefing({ schemaVersion: '2' }), /migrate.*explicitly/);
 });

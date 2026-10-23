@@ -6,12 +6,13 @@
   "description": "Single-file, narrated technical briefings with browser-native speech",
   "scripts": {
     "build": "tsx scripts/build-briefing.ts",
-    "build:examples": "tsx scripts/build-briefing.ts examples/pr-review.json dist/example-pr-review.html && tsx scripts/build-briefing.ts examples/architecture.json dist/example-architecture.html",
+    "build:examples": "tsx scripts/refresh-skill.ts && tsx scripts/build-briefing.ts examples/pr-review.json dist/example-pr-review.html && tsx scripts/build-briefing.ts examples/architecture.json dist/example-architecture.html",
+    "refresh:skill": "tsx scripts/refresh-skill.ts",
     "validate": "tsx scripts/validate-briefing.ts",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
     "test:browser": "tsx --test tests/browser.smoke.ts",
-    "check": "npm run typecheck && npm test && npm run build:examples && npm run test:browser"
+    "check": "npm run typecheck && npm run build:examples && npm test && npm run test:browser"
   },
   "dependencies": {
     "mermaid": "12.2.0",

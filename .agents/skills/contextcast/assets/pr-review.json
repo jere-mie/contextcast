@@ -1,0 +1,139 @@
+{
+  "schemaVersion": "1",
+  "id": "retry-review-demo",
+  "title": "PR #1842: Safer background job retries",
+  "kind": "pr-review",
+  "subtitle": "The intent, the implementation, and the one gap to resolve before merging.",
+  "language": "en-US",
+  "provenance": "Fictional PR review demonstration. Parcel is an invented service, and PR #1842 is not a real pull request. All conclusions are limited to the embedded ticket, implementation, and test inventory below. There are no invented external links. Diagrams are conceptual. Proposed comments are examples and are never posted.",
+  "settings": { "estimatedWordsPerMinute": 150 },
+  "sources": [
+    { "id": "ticket", "label": "Demo ticket · delivery retries", "excerpt": "FICTIONAL REQUIREMENT — PARCEL-218\nTransient delivery failures currently require manual redelivery. Retry transient failures up to three times with exponential backoff. Permanent failures should go to the dead-letter queue. A delivery must not create a duplicate customer notification. No change to message payload or public API is intended." },
+    { "id": "before-source", "label": "Before · worker.ts, lines 38–43", "excerpt": "FICTIONAL BASE IMPLEMENTATION\n38 async function handle(job: Job) {\n39   const result = await provider.send(job.payload);\n40   await jobs.markComplete(job.id, result.id);\n41 }\n42 // Queue sends rejected jobs to the dead-letter queue.\n43 // Manual redelivery is an operator action." },
+    { "id": "after-source", "label": "After · worker.ts, lines 42–53", "excerpt": "FICTIONAL PROPOSED IMPLEMENTATION\n42 async function handle(job: Job) {\n43   try {\n44     const result = await provider.send(job.payload);\n45     await jobs.markComplete(job.id, result.id);\n46   } catch (error) {\n47     if (isTransient(error) && job.attempt < 3) {\n48       await queue.retry(job, 1000 * 2 ** job.attempt);\n49       return;\n50     }\n51     await queue.deadLetter(job, error);\n52   }\n53 }\nThe supplied excerpt contains no provider idempotency key or deduplication check. Other provider internals are not supplied." },
+    { "id": "test-inventory", "label": "Demo test inventory · retry.test.ts", "excerpt": "FICTIONAL TEST REPORT\nPassing: provider transient failure schedules retry.\nPassing: delay doubles with attempt count.\nPassing: attempt at limit moves to dead-letter queue.\nPassing: permanent provider error moves directly to dead-letter queue.\nMissing: provider succeeds but markComplete rejects.\nMissing: same job delivered twice concurrently.\nMissing: recovery after process exits between send and markComplete.\nNo integration test or provider contract was supplied." }
+  ],
+  "scenes": [
+    {
+      "id": "overview", "title": "The review at a glance", "layout": "title",
+      "visual": { "headline": "Retries recover jobs.\nCan they repeat a delivery?", "description": "A focused review of automatic retries in the Parcel delivery worker. One useful improvement. One important failure window.", "items": [
+        { "id": "intent-card", "title": "Less manual recovery", "body": "Retry transient delivery failures automatically." },
+        { "id": "change-card", "title": "Bounded backoff", "body": "Retry with increasing delay, then dead-letter." },
+        { "id": "risk-card", "title": "Verify idempotency", "body": "A sent notification may be retried if persistence fails." }
+      ] },
+      "beats": [
+        { "id": "overview-1", "speech": "This is a fictional review of a delivery worker. The change is small, but it moves an important recovery decision from operators into code.", "sourceIds": ["ticket"] },
+        { "id": "overview-2", "speech": "The product goal is useful: recover temporary delivery failures automatically, so engineers spend less time replaying failed jobs by hand.", "cue": { "type": "focus", "target": "intent-card" }, "sourceIds": ["ticket", "before-source"] },
+        { "id": "overview-3", "speech": "The proposed worker adds a bounded retry path with increasing delays. Permanent errors and exhausted attempts still go to a dead letter queue.", "cue": { "type": "focus", "target": "change-card" }, "sourceIds": ["after-source"] },
+        { "id": "overview-4", "speech": "The main question is what happens after a notification has been sent, when recording completion fails. That failure can also enter the retry path.", "cue": { "type": "focus", "target": "risk-card" }, "sourceIds": ["after-source"] },
+        { "id": "overview-5", "speech": "We will trace that window, compare it with the supplied tests, and finish with a concrete review question rather than assume a production defect.", "sourceIds": ["test-inventory"] },
+        { "id": "overview-6", "speech": "Everything in this briefing comes from the embedded fictional excerpts. The sources panel lets you inspect those excerpts without leaving the player.", "cue": { "type": "callout", "text": "Fictional case study · embedded evidence · no real PR claims" }, "sourceIds": ["ticket", "after-source", "test-inventory"] }
+      ]
+    },
+    {
+      "id": "context", "title": "Why this change exists", "layout": "bullets",
+      "visual": { "items": [
+        { "id": "recover", "title": "Recover temporary failures", "body": "Reduce operator intervention on transient delivery errors." },
+        { "id": "bounded", "title": "Keep retries bounded", "body": "Up to three retries; increase delay between attempts." },
+        { "id": "permanent", "title": "Isolate permanent failures", "body": "Send unrecoverable jobs to the dead-letter queue." },
+        { "id": "duplicate", "title": "Do not duplicate notifications", "body": "Reliability includes the customer-visible outcome." }
+      ] },
+      "beats": [
+        { "id": "context-1", "speech": "First, the business requirement. A temporary provider failure currently creates operational work, even when the same job would succeed a few seconds later.", "cue": { "type": "focus", "target": "recover" }, "sourceIds": ["ticket"] },
+        { "id": "context-2", "speech": "Automatic recovery removes that burden, but the ticket does not ask for unlimited retries. It explicitly bounds the number of attempts.", "cue": { "type": "focus", "target": "bounded" }, "sourceIds": ["ticket"] },
+        { "id": "context-3", "speech": "Increasing the delay gives the dependency some breathing room. The excerpt uses a simple exponential formula; broader congestion behavior is outside the supplied evidence.", "sourceIds": ["after-source"] },
+        { "id": "context-4", "speech": "A permanent error should take a different path. Repeating an invalid request is unlikely to help, so the requirement preserves the dead letter queue.", "cue": { "type": "focus", "target": "permanent" }, "sourceIds": ["ticket"] },
+        { "id": "context-5", "speech": "There is also a customer constraint: do not create a duplicate notification. A job being marked complete is not the same as that guarantee.", "cue": { "type": "focus", "target": "duplicate" }, "sourceIds": ["ticket"] },
+        { "id": "context-6", "speech": "That distinction guides this review. We need to evaluate the side effect, the completion record, and the retry decision as one connected sequence.", "sourceIds": ["ticket", "after-source"] }
+      ]
+    },
+    {
+      "id": "flow", "title": "Follow the delivery path", "layout": "diagram",
+      "visual": { "description": "Conceptual flow from the supplied worker. Sending and recording completion are separate awaited operations.", "definition": "flowchart LR\n Q[Queued job] --> W[Worker]\n W --> P[Send notification]\n P --> D[Record completion]\n D --> C[Complete]\n P -. transient error .-> R[Schedule retry]\n D -. transient error .-> R\n R --> Q" },
+      "beats": [
+        { "id": "flow-1", "speech": "Here is the simplified control flow. A worker receives a job and asks the provider to send a notification before recording completion locally.", "sourceIds": ["after-source"] },
+        { "id": "flow-2", "speech": "On the happy path, both operations succeed. The customer receives one notification, the job is recorded as complete, and no retry is scheduled.", "cue": { "type": "focus", "target": "D" }, "sourceIds": ["after-source"] },
+        { "id": "flow-3", "speech": "When sending fails temporarily, the new error handler can schedule another attempt. This is the recovery path the feature is designed to add.", "cue": { "type": "focus", "target": "R" }, "sourceIds": ["after-source"] },
+        { "id": "flow-4", "speech": "But the completion write shares the same error handler. A failure there can also lead back to the queue, after sending already succeeded.", "cue": { "type": "callout", "text": "Watch the boundary: provider side effect → local completion record" }, "sourceIds": ["after-source"] },
+        { "id": "flow-5", "speech": "The arrows describe the excerpt, not a transaction across the provider and database. No shared transaction or deduplication contract was supplied.", "sourceIds": ["after-source"] },
+        { "id": "flow-6", "speech": "Keep that separation in mind when we inspect the change. A retry can be correct for the job state and still repeat a customer-visible action.", "sourceIds": ["after-source", "ticket"] }
+      ]
+    },
+    {
+      "id": "change", "title": "What changes in the worker", "layout": "comparison",
+      "visual": { "beforeTitle": "BEFORE · OPERATOR RECOVERY", "afterTitle": "AFTER · AUTOMATIC RECOVERY", "before": [
+        { "id": "old-send", "title": "Send, then complete", "body": "Provider call followed by a completion write." },
+        { "id": "old-error", "title": "Rejected jobs dead-letter", "body": "An operator decides whether to redeliver." }
+      ], "after": [
+        { "id": "new-handler", "title": "One shared error handler", "body": "Catches both provider and completion failures." },
+        { "id": "new-retry", "title": "Retry transient errors", "body": "Backoff while attempts remain; otherwise dead-letter." }
+      ] },
+      "beats": [
+        { "id": "change-1", "speech": "Previously, the handler sent the notification and wrote completion. An exception rejected the job, leaving redelivery to an operator after dead lettering.", "cue": { "type": "focus", "target": "old-error" }, "sourceIds": ["before-source"] },
+        { "id": "change-2", "speech": "The proposed version keeps the successful sequence intact, but wraps both awaited operations in a single try block and catches any resulting error.", "cue": { "type": "focus", "target": "new-handler" }, "sourceIds": ["after-source"] },
+        { "id": "change-3", "speech": "If the error is classified as transient and the attempt count remains below three, it schedules a retry with an exponentially increasing delay.", "cue": { "type": "focus", "target": "new-retry" }, "sourceIds": ["after-source"] },
+        { "id": "change-4", "speech": "That makes recovery faster and more consistent for the intended failure. It also removes the human decision that previously preceded redelivery.", "sourceIds": ["before-source", "after-source"] },
+        { "id": "change-5", "speech": "We should not infer the retry counter's full semantics from this snippet. The queue implementation was not supplied, so attempt accounting needs separate inspection.", "cue": { "type": "callout", "text": "Scope limit: queue counter semantics and provider contract are not supplied" }, "sourceIds": ["after-source"] },
+        { "id": "change-6", "speech": "For this briefing, the actionable concern is narrower: the new automatic path can be entered by a completion failure, not only a sending failure.", "sourceIds": ["after-source"] }
+      ]
+    },
+    {
+      "id": "implementation", "title": "The critical twelve lines", "layout": "code",
+      "visual": { "language": "typescript", "filename": "src/jobs/worker.ts · fictional excerpt", "startLine": 42, "description": "The catch spans the external side effect and the local completion write. Highlighted lines define the ambiguous outcome window.", "highlights": [[44,45],[47,48]], "code": "async function handle(job: Job) {\n  try {\n    const result = await provider.send(job.payload);\n    await jobs.markComplete(job.id, result.id);\n  } catch (error) {\n    if (isTransient(error) && job.attempt < 3) {\n      await queue.retry(job, 1000 * 2 ** job.attempt);\n      return;\n    }\n    await queue.deadLetter(job, error);\n  }\n}" },
+      "beats": [
+        { "id": "implementation-1", "speech": "Look at the two awaited calls near the top. The provider can finish successfully before the completion write has even begun.", "cue": { "type": "focus", "target": "line-44" }, "sourceIds": ["after-source"] },
+        { "id": "implementation-2", "speech": "Now imagine that the completion write times out. The catch block receives that error, even though a notification may already have reached the customer.", "cue": { "type": "focus", "target": "line-45" }, "sourceIds": ["after-source"] },
+        { "id": "implementation-3", "speech": "If that timeout is classified as transient, the condition below does not distinguish it from a temporary failure to send the notification.", "cue": { "type": "focus", "target": "line-47" }, "sourceIds": ["after-source"] },
+        { "id": "implementation-4", "speech": "The retry schedules the same job again. On the next invocation, execution starts with another provider call rather than resuming at the completion write.", "cue": { "type": "focus", "target": "line-48" }, "sourceIds": ["after-source"] },
+        { "id": "implementation-5", "speech": "The excerpt shows no stable idempotency key passed to the provider. That is an observed absence in this snippet, not proof about hidden provider behavior.", "cue": { "type": "callout", "text": "Observed: no key in the supplied call. Unknown: provider-side deduplication." }, "sourceIds": ["after-source"] },
+        { "id": "implementation-6", "speech": "A provider wrapper might already deduplicate requests. We need that contract, or a test demonstrating equivalent protection, before treating this risk as resolved.", "sourceIds": ["after-source", "test-inventory"] }
+      ]
+    },
+    {
+      "id": "risk", "title": "The risk worth resolving", "layout": "finding",
+      "visual": { "status": "potential", "severity": "high", "headline": "A retry may repeat a successful send.", "detail": "A transient completion-write failure can retry the whole handler after the provider succeeds. Customer impact depends on the provider's deduplication contract, which is not supplied.", "recommendation": "Could we demonstrate that retrying after a completion-write failure cannot send a second notification? A stable provider idempotency key or an equivalent deduplication guarantee, backed by a regression test, would resolve this concern." },
+      "beats": [
+        { "id": "risk-1", "speech": "Here is the review finding. A successful send followed by a transient completion failure can cause the same handler to run again.", "sourceIds": ["after-source"] },
+        { "id": "risk-2", "speech": "The possible customer impact is a duplicate notification. That conflicts with an explicit ticket requirement, so it deserves attention before this change is merged.", "sourceIds": ["ticket"] },
+        { "id": "risk-3", "speech": "The status is potential, because provider internals are missing. The priority reflects the requirement at risk, rather than a measured rate of production failures.", "cue": { "type": "callout", "text": "Potential concern · impact is clear; production likelihood is unmeasured" }, "sourceIds": ["ticket", "after-source"] },
+        { "id": "risk-4", "speech": "The proposed comment asks for a demonstrated guarantee. A stable key recognized by the provider is one possible answer; equivalent existing protection would also count.", "sourceIds": ["after-source"] },
+        { "id": "risk-5", "speech": "We should not request a large redesign merely because this snippet is incomplete. First inspect the provider contract and reproduce the specific failure window.", "sourceIds": ["after-source", "test-inventory"] },
+        { "id": "risk-6", "speech": "If deduplication is absent, a targeted fix and regression test are justified. If it already exists, document the guarantee and test that retries preserve it.", "sourceIds": ["ticket", "test-inventory"] }
+      ]
+    },
+    {
+      "id": "tests", "title": "What the tests establish", "layout": "comparison",
+      "visual": { "beforeTitle": "SUPPLIED · PASSING", "afterTitle": "MISSING · VERIFY NEXT", "before": [
+        { "id": "tested-backoff", "title": "Retry policy", "body": "Transient failure schedules retry; delays double." },
+        { "id": "tested-limit", "title": "Terminal outcomes", "body": "Limit and permanent errors dead-letter." }
+      ], "after": [
+        { "id": "missing-complete", "title": "Send succeeds, write fails", "body": "Assert only one notification across retry." },
+        { "id": "missing-concurrent", "title": "Redelivery and interruption", "body": "Concurrent jobs and process-exit recovery." }
+      ] },
+      "beats": [
+        { "id": "tests-1", "speech": "The supplied test inventory does cover the basic retry policy. Temporary provider errors schedule retries, and the delay increases with the attempt count.", "cue": { "type": "focus", "target": "tested-backoff" }, "sourceIds": ["test-inventory"] },
+        { "id": "tests-2", "speech": "It also checks the two terminal branches: an exhausted attempt budget and a permanent provider error both route to the dead letter queue.", "cue": { "type": "focus", "target": "tested-limit" }, "sourceIds": ["test-inventory"] },
+        { "id": "tests-3", "speech": "Those tests establish routing behavior. They do not establish that the external side effect happens only once when the local completion write fails.", "cue": { "type": "focus", "target": "missing-complete" }, "sourceIds": ["test-inventory"] },
+        { "id": "tests-4", "speech": "The most useful additional regression test makes the first send succeed, rejects completion, then runs the retry and counts actual provider-side deliveries.", "sourceIds": ["test-inventory", "after-source"] },
+        { "id": "tests-5", "speech": "Concurrent redelivery and process interruption are additional gaps in the inventory. They matter to a broader delivery guarantee, but should follow the immediate failure-window test.", "cue": { "type": "focus", "target": "missing-concurrent" }, "sourceIds": ["test-inventory"] },
+        { "id": "tests-6", "speech": "No real test suite was executed for this invented service. This inventory is demonstration evidence, and the briefing makes no claim about actual repository coverage.", "cue": { "type": "callout", "text": "Demo inventory, not an executed production test report" }, "sourceIds": ["test-inventory"] }
+      ]
+    },
+    {
+      "id": "conclusion", "title": "A concrete review decision", "layout": "bullets",
+      "visual": { "items": [
+        { "id": "decision-contract", "title": "Inspect the provider guarantee", "body": "Find deduplication behavior and key lifetime." },
+        { "id": "decision-test", "title": "Test the failure window", "body": "Successful send → failed completion → retry." },
+        { "id": "decision-merge", "title": "Resolve before merging", "body": "Demonstrate that a retry cannot duplicate a delivery." }
+      ] },
+      "beats": [
+        { "id": "conclusion-1", "speech": "The feature has a clear operational benefit, and its retry branches are understandable. The remaining review decision turns on one customer-visible guarantee.", "sourceIds": ["ticket", "after-source"] },
+        { "id": "conclusion-2", "speech": "First inspect the provider wrapper. Determine whether repeated attempts for the same job share a stable identity that the provider actually honors.", "cue": { "type": "focus", "target": "decision-contract" }, "sourceIds": ["after-source"] },
+        { "id": "conclusion-3", "speech": "Then add the targeted regression test. It should observe the delivered notification count, rather than merely assert that a retry was scheduled.", "cue": { "type": "focus", "target": "decision-test" }, "sourceIds": ["test-inventory"] },
+        { "id": "conclusion-4", "speech": "If that test exposes duplicate delivery, address the mechanism before merging. If existing protection passes, record the contract so future changes preserve it.", "cue": { "type": "focus", "target": "decision-merge" }, "sourceIds": ["ticket", "after-source"] },
+        { "id": "conclusion-5", "speech": "The draft question and supporting excerpts are available under Sources. You can copy the wording, inspect the evidence, and adapt the recommendation to a real review.", "sourceIds": ["after-source", "test-inventory"] },
+        { "id": "conclusion-6", "speech": "The takeaway is simple: successful recovery means preserving the intended customer outcome, even when the bookkeeping fails after the external action has already succeeded.", "cue": { "type": "callout", "text": "Review the outcome, not only the retry branch." }, "sourceIds": ["ticket", "after-source"] }
+      ]
+    }
+  ]
+}
